@@ -45,7 +45,7 @@ func count(token chan int) {
        if item == requested + 1 {
            token <- item
            fmt.Println("Produced: ",item)
-           requested := <- token 
+           requested = <- token 
            fmt.Println("Requested: ",requested)
        }
 
@@ -76,7 +76,13 @@ func main() {
     token := make(chan int)
     go count(token)
     token <- 13
-    i := token
+    i := <- token
     fmt.Println(i)
+    token <- 53
+    i = <- token
+    fmt.Println("I", i)
+    token <- 7
+    i = <- token
+    fmt.Println("I", i)
 
 }
