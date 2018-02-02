@@ -68,7 +68,7 @@ func (b *Checkpoint) pop() {
     if len(b.bookmark) > 1 {
         b.bookmark = b.bookmark[:len(b.bookmark)-1]
     } else {
-        fmt.Println("Unexpected length in push",len(b.bookmark),cap(b.bookmark))
+        fmt.Println("Unexpected length in pop",len(b.bookmark),cap(b.bookmark))
     }
 
 }
@@ -82,11 +82,25 @@ func (b *Checkpoint) mark() {
 }
 
 func (b *Checkpoint) compareTo(other *Checkpoint) int {
-    int i = 0
-    while i < len(b.bookmark) {
+    i := 0
+    for i < len(b.bookmark){
         if i >= len(other.bookmark) {
             return 1
-		} else if len(
+	} else {
+            mine := b.bookmark[i]
+            theirs := other.bookmark[i]
+            if mine < theirs {
+                return -1
+            } else if mine > theirs {
+                return 1
+            }
+            i++
+        }
+    }
+    if i < len(other.bookmark) {
+        return -1
+    } else {
+        return 0
     }
 }
 
@@ -133,12 +147,23 @@ func main() {
     b.p()
     b.mark()
     b.p()
-    b.pop()
-    b.p()
+    //b.pop()
+    //b.p()
 
     c := make([]int,1,7)
     fmt.Println(c)
     c = c[:2]
     fmt.Println(c)
+
+    d := &Checkpoint{bookmark : []int{1,2}}
+    fmt.Println(b.compareTo(d))
+    fmt.Println(d.compareTo(b))
+    fmt.Println(d.compareTo(d))
+    fmt.Println(b.compareTo(b))
+    b.pop()
+    fmt.Println(b.compareTo(d))
+    fmt.Println(d.compareTo(b))
+    fmt.Println(d.compareTo(d))
+    fmt.Println(b.compareTo(b))
 
 }
