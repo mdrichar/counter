@@ -52,6 +52,45 @@ func count(token chan int) {
     }
 }
 
+type Checkpoint struct {
+     bookmark []int 
+}
+
+func (b *Checkpoint) push() {
+    if len(b.bookmark) < cap(b.bookmark) {
+        b.bookmark = b.bookmark[:len(b.bookmark)+1]
+    } else {
+        fmt.Println("Unexpected length in push",len(b.bookmark),cap(b.bookmark))
+    }
+}
+
+func (b *Checkpoint) pop() {
+    if len(b.bookmark) > 1 {
+        b.bookmark = b.bookmark[:len(b.bookmark)-1]
+    } else {
+        fmt.Println("Unexpected length in push",len(b.bookmark),cap(b.bookmark))
+    }
+
+}
+
+func (b *Checkpoint) p() {
+    fmt.Println(b.bookmark)
+}
+
+func (b *Checkpoint) mark() {
+    b.bookmark[len(b.bookmark)-1]++
+}
+
+func (b *Checkpoint) compareTo(other *Checkpoint) int {
+    int i = 0
+    while i < len(b.bookmark) {
+        if i >= len(other.bookmark) {
+            return 1
+		} else if len(
+    }
+}
+
+
 func main() {
     fmt.Println("Hello, World")
     a := [5]int{0,1,2,3,4}
@@ -84,5 +123,22 @@ func main() {
     token <- 7
     i = <- token
     fmt.Println("I", i)
+
+    b := &Checkpoint{bookmark : make([]int,1,7)}
+    b.mark()
+    b.p()
+    b.mark()
+    b.p()
+    b.push()
+    b.p()
+    b.mark()
+    b.p()
+    b.pop()
+    b.p()
+
+    c := make([]int,1,7)
+    fmt.Println(c)
+    c = c[:2]
+    fmt.Println(c)
 
 }
