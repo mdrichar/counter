@@ -61,13 +61,20 @@ type LightCheckpoint struct {
 
 type Checkpoint struct {
      bookmark []int 
-     request chan *LightCheckpoint
+     request chan LightCheckpoint
+     response chan MachineState
+     activeRequest LightCheckpoint
+     currentState *MachineState
+     hasActiveRequest bool
      fastforward bool
-     req *LightCheckpoint
 }
 
 type MachineState struct {
     value int
+}
+
+func (s *MachineState) reset() {
+    s.value = 0
 }
 
 func (b *Checkpoint) push() {
@@ -94,13 +101,22 @@ func (b *Checkpoint) p() {
 func (b *Checkpoint) mark() {
     fmt.Println("Marking")
     b.bookmark[len(b.bookmark)-1]++
-    if b.req == nil {
-	    fmt.Println("Checked for nil")
-        b.req = <- b.request
+    // Can only read the request once, need to save it somewhere for future use
+    // As soon as we get it once, copy it over to activeRequest and use that subsequently (so we don't query the channel again) until the request has been satisfied
+    if b.hasActiveRequest == false {
+        fmt.Println("Wait for request")
+        b.activeRequest = <- b.request
+        fmt.Println("Request received", b.activeRequest)
+        if b.compareTo(&b.activeRequest) > 0 {
+	    fmt.Println("Rewinding")
+	    b.fastforward = true
+	}
+        b.hasActiveRequest = true
     }
-    if b.compareTo(b.req) >= 0 {
+    if !b.fastforward && b.compareTo(&b.activeRequest) >= 0 {
         fmt.Println("Request satisfied")
-        
+        b.response <- *b.currentState
+        b.hasActiveRequest = false // Next time through loop, we will block until request comes over the channel
     }
 }
 
@@ -133,31 +149,28 @@ func (b *Checkpoint) compareTo(other *LightCheckpoint) int {
     }
 }
 
-func countToTen(c *Checkpoint, s chan MachineState) {
-    fmt.Println("Counting to ten")
-    i := 0
-    for i < 10 {
-	fmt.Println("I: ",i)
-	i++
-        c.mark()
-        s<- MachineState{value : i}
+func requestReplyLoop(lc chan LightCheckpoint, s chan MachineState) {
+    fmt.Println("RequestReplyLoop")
+    ms := MachineState{value:1}
+    c := Checkpoint{request : lc, response : s, fastforward : false, bookmark : make([]int,1,7), hasActiveRequest : false, currentState : &ms}
+
+    for {
+	c.fastforward = false
+	for i := 0; i < 6; i++ {
+            c.mark()
+            ms.value++
+        }
     }
 
-}
-
-func requestReplyLoop(c *Checkpoint, lc chan LightCheckpoint, s chan MachineState) {
-    fmt.Println("RequestReplyLoop",c.fastforward)
-    c.
-    k := <-lc
-    fmt.Println("Received request",k)
-    fmt.Println("Generate reply")
-    ms := MachineState{value:1}
-    s<-ms
-    k = <-lc
-    fmt.Println("Received request",k)
-    fmt.Println("Generate reply")
-    ms.value=2
-    s<-ms
+    //k := <-lc
+    //fmt.Println("Received request",k)
+    //fmt.Println("Generate reply")
+    //s<-ms
+    //k = <-lc
+    //fmt.Println("Received request",k)
+    //fmt.Println("Generate reply")
+    //ms.value=2
+    //s<-ms
 }
 
 func doAnything() {
@@ -172,9 +185,6 @@ func main() {
     //}
     //h := mclose()
     //fmt.Println(h())
-    //fmt.Println(h())
-    //fmt.Println(h())
-    //fmt.Println(h())
 
     //done := make(chan bool, 1)
     //keepgo := make(chan bool,1)
@@ -187,17 +197,6 @@ func main() {
     //fmt.Println("After keepgo is false")
     //<-done
 
-    //token := make(chan int)
-    //go count(token)
-    //token <- 13
-    //i := <- token
-    //fmt.Println(i)
-    //token <- 53
-    //i = <- token
-    //fmt.Println("I", i)
-    //token <- 7
-    //i = <- token
-    //fmt.Println("I", i)
 
 //
     req := LightCheckpoint{bookmark : make([]int,1,7)}
@@ -213,7 +212,7 @@ func main() {
     fmt.Println("Receive state")
     ms := <-s
     fmt.Println("Received state",ms)
-    lc.bookmark[0]++
+    lc.bookmark[0] += 3
 
     fmt.Println("Generate request")
     c <- lc
@@ -221,17 +220,6 @@ func main() {
     ms = <-s
     fmt.Println("Received state",ms)
    
-    //go countToTen(b, s)
-    //fmt.Println("Sending request",req)
-    //b.request <- &req
-    //fmt.Println("Made it this far")
-    //ms := <-s
-    //fmt.Println("MS: ", ms)
-
-    //fmt.Println(b.request)
-    //t := make(chan int,1)
-    //fmt.Println(t)
-    //t <- 1
 //
 
     //b.request <- &req
