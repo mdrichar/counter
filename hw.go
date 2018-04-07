@@ -14,8 +14,11 @@ func mclose() func() int {
 func do1(done chan bool, keepgo chan bool) {
     fmt.Println("Do1 called")
     done <- true 
+    fmt.Println("Done is true")
     x:= <- keepgo
-    fmt.Println("Keepgo",keepgo,x)
+    fmt.Println("Keepgo",keepgo,x,"SOMETHINGELSE")
+    done <- false
+    fmt.Println("done",done)
     
     
 }
@@ -63,6 +66,10 @@ type Checkpoint struct {
      req *LightCheckpoint
 }
 
+type MachineState struct {
+    value int
+}
+
 func (b *Checkpoint) push() {
     if len(b.bookmark) < cap(b.bookmark) {
         b.bookmark = b.bookmark[:len(b.bookmark)+1]
@@ -85,8 +92,10 @@ func (b *Checkpoint) p() {
 }
 
 func (b *Checkpoint) mark() {
+    fmt.Println("Marking")
     b.bookmark[len(b.bookmark)-1]++
     if b.req == nil {
+	    fmt.Println("Checked for nil")
         b.req = <- b.request
     }
     if b.compareTo(b.req) >= 0 {
@@ -124,27 +133,59 @@ func (b *Checkpoint) compareTo(other *LightCheckpoint) int {
     }
 }
 
+func countToTen(c *Checkpoint, s chan MachineState) {
+    fmt.Println("Counting to ten")
+    i := 0
+    for i < 10 {
+	fmt.Println("I: ",i)
+	i++
+        c.mark()
+        s<- MachineState{value : i}
+    }
+
+}
+
+func requestReplyLoop(c *Checkpoint, lc chan LightCheckpoint, s chan MachineState) {
+    fmt.Println("RequestReplyLoop",c.fastforward)
+    c.
+    k := <-lc
+    fmt.Println("Received request",k)
+    fmt.Println("Generate reply")
+    ms := MachineState{value:1}
+    s<-ms
+    k = <-lc
+    fmt.Println("Received request",k)
+    fmt.Println("Generate reply")
+    ms.value=2
+    s<-ms
+}
+
+func doAnything() {
+    fmt.Println("Do anything")
+}
 
 func main() {
-    fmt.Println("Hello, World")
-    a := [5]int{0,1,2,3,4}
-    for i := 0; i < 5; i++ {
-        fmt.Println("A[",i,"]",a[i])
-    }
-    h := mclose()
-    fmt.Println(h())
-    fmt.Println(h())
-    fmt.Println(h())
-    fmt.Println(h())
+    //fmt.Println("Hello, World")
+    //a := [5]int{0,1,2,3,4}
+    //for i := 0; i < 5; i++ {
+    //    fmt.Println("A[",i,"]",a[i])
+    //}
+    //h := mclose()
+    //fmt.Println(h())
+    //fmt.Println(h())
+    //fmt.Println(h())
+    //fmt.Println(h())
 
-    done := make(chan bool, 1)
-    keepgo := make(chan bool,1)
-    go do1(done,keepgo)
-    
-    <-done
-    fmt.Println("All ok, now return to do 1")
-    keepgo<-false
-    fmt.Println("After keepgo is false")
+    //done := make(chan bool, 1)
+    //keepgo := make(chan bool,1)
+    //go do1(done,keepgo)
+    //
+    //<-done
+    //fmt.Println("Received done: ", done)
+    //fmt.Println("All ok, now return to do 1")
+    //keepgo<-false
+    //fmt.Println("After keepgo is false")
+    //<-done
 
     //token := make(chan int)
     //go count(token)
@@ -158,14 +199,42 @@ func main() {
     //i = <- token
     //fmt.Println("I", i)
 
+//
     req := LightCheckpoint{bookmark : make([]int,1,7)}
     req.bookmark[0] = 1
-    b := &Checkpoint{bookmark : make([]int,1,7)}
-    fmt.Println(b.request)
-    t := make(chan int,1)
-    fmt.Println(t)
-    t <- 1
-    b.request <- &req
+    //b := &Checkpoint{bookmark : make([]int,1,7)}
+    c := make(chan LightCheckpoint)
+    s := make(chan MachineState)
+    go requestReplyLoop(c,s)
+    lc := LightCheckpoint{bookmark : make([]int,1,7)}
+
+    fmt.Println("Generate request")
+    c <- lc
+    fmt.Println("Receive state")
+    ms := <-s
+    fmt.Println("Received state",ms)
+    lc.bookmark[0]++
+
+    fmt.Println("Generate request")
+    c <- lc
+    fmt.Println("Receive state")
+    ms = <-s
+    fmt.Println("Received state",ms)
+   
+    //go countToTen(b, s)
+    //fmt.Println("Sending request",req)
+    //b.request <- &req
+    //fmt.Println("Made it this far")
+    //ms := <-s
+    //fmt.Println("MS: ", ms)
+
+    //fmt.Println(b.request)
+    //t := make(chan int,1)
+    //fmt.Println(t)
+    //t <- 1
+//
+
+    //b.request <- &req
     //b.mark()
     //b.p()
     //b.mark()
