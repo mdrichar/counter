@@ -52,8 +52,15 @@ func count(token chan int) {
     }
 }
 
+type LightCheckpoint struct {
+     bookmark []int
+}
+
 type Checkpoint struct {
      bookmark []int 
+     request chan *LightCheckpoint
+     fastforward bool
+     req *LightCheckpoint
 }
 
 func (b *Checkpoint) push() {
@@ -79,9 +86,22 @@ func (b *Checkpoint) p() {
 
 func (b *Checkpoint) mark() {
     b.bookmark[len(b.bookmark)-1]++
+    if b.req == nil {
+        b.req = <- b.request
+    }
+    if b.compareTo(b.req) >= 0 {
+        fmt.Println("Request satisfied")
+        
+    }
 }
 
-func (b *Checkpoint) compareTo(other *Checkpoint) int {
+func (b *Checkpoint) reset() {
+    b.bookmark = b.bookmark[0:1]
+    b.bookmark[0] = 0
+    b.fastforward = false
+}
+
+func (b *Checkpoint) compareTo(other *LightCheckpoint) int {
     i := 0
     for i < len(b.bookmark){
         if i >= len(other.bookmark) {
@@ -126,44 +146,51 @@ func main() {
     keepgo<-false
     fmt.Println("After keepgo is false")
 
-    token := make(chan int)
-    go count(token)
-    token <- 13
-    i := <- token
-    fmt.Println(i)
-    token <- 53
-    i = <- token
-    fmt.Println("I", i)
-    token <- 7
-    i = <- token
-    fmt.Println("I", i)
+    //token := make(chan int)
+    //go count(token)
+    //token <- 13
+    //i := <- token
+    //fmt.Println(i)
+    //token <- 53
+    //i = <- token
+    //fmt.Println("I", i)
+    //token <- 7
+    //i = <- token
+    //fmt.Println("I", i)
 
+    req := LightCheckpoint{bookmark : make([]int,1,7)}
+    req.bookmark[0] = 1
     b := &Checkpoint{bookmark : make([]int,1,7)}
-    b.mark()
-    b.p()
-    b.mark()
-    b.p()
-    b.push()
-    b.p()
-    b.mark()
-    b.p()
-    //b.pop()
+    fmt.Println(b.request)
+    t := make(chan int,1)
+    fmt.Println(t)
+    t <- 1
+    b.request <- &req
+    //b.mark()
     //b.p()
+    //b.mark()
+    //b.p()
+    //b.push()
+    //b.p()
+    //b.mark()
+    //b.p()
+    ////b.pop()
+    ////b.p()
 
-    c := make([]int,1,7)
-    fmt.Println(c)
-    c = c[:2]
-    fmt.Println(c)
+    //c := make([]int,1,7)
+    //fmt.Println(c)
+    //c = c[:2]
+    //fmt.Println(c)
 
-    d := &Checkpoint{bookmark : []int{1,2}}
-    fmt.Println(b.compareTo(d))
-    fmt.Println(d.compareTo(b))
-    fmt.Println(d.compareTo(d))
-    fmt.Println(b.compareTo(b))
-    b.pop()
-    fmt.Println(b.compareTo(d))
-    fmt.Println(d.compareTo(b))
-    fmt.Println(d.compareTo(d))
-    fmt.Println(b.compareTo(b))
+    //d := &Checkpoint{bookmark : []int{1,2}}
+    //fmt.Println(b.compareTo(d))
+    //fmt.Println(d.compareTo(b))
+    //fmt.Println(d.compareTo(d))
+    //fmt.Println(b.compareTo(b))
+    //b.pop()
+    //fmt.Println(b.compareTo(d))
+    //fmt.Println(d.compareTo(b))
+    //fmt.Println(d.compareTo(d))
+    //fmt.Println(b.compareTo(b))
 
 }
