@@ -1,14 +1,11 @@
 package main
 
 import "fmt"
-
-type Checkpoint struct {
-    bookmark [] int
-}
+import "Checkpoint"
 
 type MachineState struct {
-    request chan Checkpoint
-    internalCounter Checkpoint
+    request chan chpt.Checkpoint
+    internalCounter chpt.Checkpoint
     state int
 }
 
@@ -26,8 +23,8 @@ func requestReplyLoop(msChan chan MachineState) {
 }
 
 func main() {
-    ms := MachineState{request : make(chan Checkpoint), internalCounter : Checkpoint{bookmark : make([]int,1,7)}}
-    request := Checkpoint{bookmark : make([]int,1,7)}
+    ms := MachineState{request : make(chan chpt.Checkpoint), internalCounter : chpt.Checkpoint{bookmark : make([]int,1,7)}}
+    request := chpt.Checkpoint{bookmark : make([]int,1,7)}
     requestChan := ms.request
     msChan := make(chan MachineState)
     go requestReplyLoop(msChan)
